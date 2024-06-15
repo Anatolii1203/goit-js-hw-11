@@ -1,57 +1,44 @@
-import { findImg } from './js/pixabay-api';
-import { downLoadImg } from './js/render-functions';
-import { createImg } from './js/render-functions';
-import { imgGallery } from './js/render-functions';
+// main.js
+import { fetchImg } from './js/pixabay-api.js';
+import {
+  renderCard,
+  showErrorMessage,
+  showLoadingIndicator,
+  hideLoadingIndicator,
+} from './js/render-functions.js';
 
-import iziToast from 'izitoast';
-import 'izitoast/dist/css/iziToast.min.css';
-
-const from = document.querySelector('.form');
+const searchForm = document.querySelector('form');
 const gallery = document.querySelector('.gallery');
-const loader = document.querySelector('#loading');
 
-from.addEventListener('submit', event => {
-  event.preventDefault();
-  gallery.innerHTML = '';
+searchForm.addEventListener('submit', onSearch);
 
-  const request = event.target.request.value.trim();
+function onSearch(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const searchQuery = form.elements.query.value.trim();
 
-  findImg(request)
-    .then(data => {
-      if (data.hits.length === 0) {
-        iziToast.error({
-          message:
-            'Sorry, there are no images matching your search query. Please try again!',
-          position: 'topRight',
-        });
+  if (searchQuery === '') {
+    showErrorMessage('Please enter a search query.');
+    return;
+  }
+
+  showLoadingIndicator();
+  fetchImg(searchQuery)
+    .then(hits => {
+      hideLoadingIndicator();
+      if (hits.length === 0) {
+        showErrorMessage(
+          'Sorry, there are no images matching your search query. Please try again!'
+        );
         return;
-      } else {
-        const markup = downLoadImg(data.hits);
-        gallery.innerHTML = markup;
-        showLoading();
-        imgGallery();
       }
+      renderCard(hits, gallery);
     })
     .catch(error => {
-      iziToast.error({
-        message: `An error occurred: ${error.message}. Please try again later.`,
-        position: 'topRight',
-      });
-    })
-    .finally(() => {
-      event.target.reset();
-      hideLoading();
+      hideLoadingIndicator();
+      console.log(error);
+      showErrorMessage('Failed to fetch images. Please try again later.');
     });
-});
 
-function showLoading() {
-  loader.style.display = 'block';
+  form.reset();
 }
-
-function hideLoading() {
-  loader.style.display = 'none';
-}
-
-// window.addEventListener('load', () => {
-//   hideLoading();
-// });
